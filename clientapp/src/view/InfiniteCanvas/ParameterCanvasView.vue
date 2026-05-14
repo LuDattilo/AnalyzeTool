@@ -70,10 +70,29 @@ const showAiSettings = ref(false);
 const refreshingAll = ref(false);
 const categorySnapshots = ref<Record<string, ElementItem[]>>({});
 const chartActionOptions = [
-  { label: "Select", value: "SelectionInRevit" },
-  { label: "Isolate", value: "IsolationInRevit" },
+  { label: "Select", value: "SelectionInRevit", icon: "pi pi-mouse-pointer" },
+  { label: "Isolate", value: "IsolationInRevit", icon: "pi pi-eye" },
+  { label: "Color", value: "OverrideColorInRevit", icon: "pi pi-palette" },
 ];
 const selectedChartActionCommand = ref("SelectionInRevit");
+const chartActionColor = ref("#EF4444");
+const resettingView = ref(false);
+
+async function resetActiveView() {
+  if (resettingView.value) return;
+  resettingView.value = true;
+  try {
+    await sendRequest(Commands.ResetViewOverridesInRevit, { resetAll: true });
+    notificationStore.success?.("Active Revit view restored to original settings.");
+  } catch (err) {
+    console.error("Failed to reset view", err);
+    notificationStore.error?.("Failed to reset view overrides.");
+  } finally {
+    setTimeout(() => {
+      resettingView.value = false;
+    }, 500);
+  }
+}
 const hasSelectedCards = computed(() => selectedCardIds.value.length > 0);
 const selectedCardIdSet = computed(() => new Set(selectedCardIds.value));
 const {
@@ -441,6 +460,7 @@ watch(projectScope, (nextScope, prevScope) => {
         :items="getCardItems(card)"
         :selectedParameter="card.parameter"
         :actionCommand="selectedChartActionCommand"
+        :actionColor="chartActionColor"
       />
 
       <!-- Table stays mounted during refresh — only props.items updates -->
@@ -458,13 +478,17 @@ watch(projectScope, (nextScope, prevScope) => {
         <ToolbarControls
           :chartActionOptions="chartActionOptions"
           :chartAction="selectedChartActionCommand"
+          :chartActionColor="chartActionColor"
           :refreshingAll="refreshingAll"
+          :resettingView="resettingView"
           :hasSelectedCards="hasSelectedCards"
           :hasCards="cards.length > 0"
           @update:chartAction="selectedChartActionCommand = $event"
+          @update:chartActionColor="chartActionColor = $event"
           @toggleCreate="showCreatePanel = !showCreatePanel"
           @openGenerator="showGeneratorDrawer = true"
           @refreshAll="refreshAllCards"
+          @resetView="resetActiveView"
           @removeSelected="removeSelectedCards"
           @removeAll="removeAllCards"
           @openSettings="showAiSettings = true"
@@ -516,8 +540,14 @@ watch(projectScope, (nextScope, prevScope) => {
 <style scoped>
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  background: linear-gradient(to bottom, var(--p-surface-0, #ffffff), var(--p-surface-50, #f8fafc));
+  border: 1px solid var(--p-surface-200, #e2e8f0);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .card-state {

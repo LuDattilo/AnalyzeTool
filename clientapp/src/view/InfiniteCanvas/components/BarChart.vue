@@ -12,6 +12,7 @@ const props = defineProps<{
   items: ElementItem[];
   selectedParameter?: string | null;
   actionCommand?: string;
+  actionColor?: string;
 }>();
 
 const { palette, hoverPalette, baseOptions } = useChartDefaults({
@@ -73,7 +74,11 @@ const chartData = computed(() => ({
 function runActionForIds(elementIds: number[]) {
   if (!elementIds.length) return;
   const command = props.actionCommand || Commands.SelectionInRevit;
-  sendRequest(command as any, { elementIds } as any).catch((err) => {
+  const payload: any =
+    command === Commands.OverrideColorInRevit
+      ? { elementIds, color: props.actionColor || "#EF4444" }
+      : { elementIds };
+  sendRequest(command as any, payload).catch((err) => {
     console.error("Failed to execute chart action", err);
   });
 }

@@ -11,6 +11,8 @@ export type WebViewMessage = {
 export interface CommandPayloads {
   [Commands.SelectionInRevit]: { elementIds: number[] };
   [Commands.IsolationInRevit]: { elementIds: number[] };
+  [Commands.OverrideColorInRevit]: { elementIds: number[]; color: string };
+  [Commands.ResetViewOverridesInRevit]: { resetAll?: boolean; elementIds?: number[] };
   [Commands.GetCategoriesInRevit]: { null: null };
   [Commands.GetDataByCategoryName]: { categoryName: string };
   [Commands.GetDocumentHealthStatus]: DocumentHealthPayload;
@@ -25,6 +27,8 @@ export interface CommandPayloads {
 export const Commands = {
   SelectionInRevit: "SelectionInRevit",
   IsolationInRevit: "IsolationInRevit",
+  OverrideColorInRevit: "OverrideColorInRevit",
+  ResetViewOverridesInRevit: "ResetViewOverridesInRevit",
   GetCategoriesInRevit: "GetCategoriesInRevit",
   GetDataByCategoryName: "GetDataByCategoryName",
   GetDocumentHealthStatus: "GetDocumentHealthStatus",
