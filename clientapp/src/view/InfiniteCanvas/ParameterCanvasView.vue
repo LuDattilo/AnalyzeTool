@@ -101,9 +101,12 @@ const {
   draftCategoryLoading,
   draftCategoryError,
   viewTypeOptions,
+  paramScope,
+  paramScopeOptions,
   availableParameters,
   canCreateCard,
   onDraftCategoryChange,
+  onParamScopeChange,
   createCard,
 } = useCardCreator({
   showCreatePanel,
@@ -475,12 +478,15 @@ watch(projectScope, (nextScope, prevScope) => {
           :draftParameter="draft.parameter"
           :draftViewType="draft.viewType"
           :viewTypeOptions="viewTypeOptions"
+          :paramScope="paramScope"
+          :paramScopeOptions="paramScopeOptions"
           :draftCategoryLoading="draftCategoryLoading"
           :draftCategoryError="draftCategoryError"
           :canCreateCard="canCreateCard"
           @update:category="onDraftCategoryChange"
           @update:parameter="draft.parameter = $event"
           @update:viewType="draft.viewType = $event || 'chart'"
+          @update:paramScope="onParamScopeChange"
           @close="showCreatePanel = false"
           @create="createCard"
         />

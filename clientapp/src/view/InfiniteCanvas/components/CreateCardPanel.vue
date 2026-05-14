@@ -1,9 +1,15 @@
 <script setup lang="ts">
 type CardViewType = "chart" | "table";
+type ParamScope = "all" | "instance" | "type";
 
 type ViewTypeOption = {
   label: string;
   value: CardViewType;
+};
+
+type ScopeOption = {
+  label: string;
+  value: ParamScope;
 };
 
 const props = defineProps<{
@@ -14,6 +20,8 @@ const props = defineProps<{
   draftParameter: string | null;
   draftViewType: CardViewType;
   viewTypeOptions: ViewTypeOption[];
+  paramScope: ParamScope;
+  paramScopeOptions: ScopeOption[];
   draftCategoryLoading: boolean;
   draftCategoryError: string;
   canCreateCard: boolean;
@@ -23,6 +31,7 @@ const emit = defineEmits<{
   (e: "update:category", value: string | null): void;
   (e: "update:parameter", value: string | null): void;
   (e: "update:viewType", value: CardViewType): void;
+  (e: "update:paramScope", value: ParamScope): void;
   (e: "close"): void;
   (e: "create"): void;
 }>();
@@ -39,6 +48,9 @@ const emit = defineEmits<{
           :options="props.sortedCategories"
           placeholder="Select category"
           :modelValue="props.draftCategory"
+          :filter="true"
+          filter-placeholder="Search category…"
+          show-clear
           @update:modelValue="emit('update:category', $event)"
         />
       </div>
@@ -50,11 +62,17 @@ const emit = defineEmits<{
           placeholder="Select parameter"
           :modelValue="props.draftParameter"
           :disabled="!props.draftCategory || props.draftCategoryLoading"
+          :filter="true"
+          filter-placeholder="Search parameter…"
+          show-clear
           @update:modelValue="emit('update:parameter', $event)"
         />
         <span v-if="props.draftCategoryLoading" class="creator-meta">Loading parameters...</span>
         <span v-else-if="props.draftCategoryError" class="creator-meta creator-meta--error">
           {{ props.draftCategoryError }}
+        </span>
+        <span v-else-if="props.draftCategory" class="creator-meta">
+          {{ props.availableParameters.length }} matching · scope: {{ props.paramScope }}
         </span>
       </div>
 
@@ -68,6 +86,18 @@ const emit = defineEmits<{
           @update:modelValue="emit('update:viewType', $event || 'chart')"
         />
       </div>
+    </div>
+
+    <div class="creator-scope-row">
+      <label class="creator-scope-label">Parameter scope</label>
+      <SelectButton
+        :options="props.paramScopeOptions"
+        optionLabel="label"
+        optionValue="value"
+        :modelValue="props.paramScope"
+        :allowEmpty="false"
+        @update:modelValue="emit('update:paramScope', $event || 'all')"
+      />
     </div>
 
     <div class="creator-actions">
@@ -86,7 +116,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .creator-panel {
-  width: min(34rem, calc(100vw - 4rem));
+  width: min(36rem, calc(100vw - 4rem));
   padding: 0.75rem;
   border: 1px solid var(--p-surface-300, #d1d5db);
   border-radius: 0.7rem;
@@ -125,6 +155,19 @@ const emit = defineEmits<{
 
 .creator-meta--error {
   color: #dc2626;
+}
+
+.creator-scope-row {
+  margin-top: 0.65rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.creator-scope-label {
+  font-size: 0.7rem;
+  color: var(--p-surface-600, #475569);
+  flex-shrink: 0;
 }
 
 .creator-actions {

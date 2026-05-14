@@ -1,7 +1,8 @@
 import { computed, reactive, ref, type Ref } from "vue";
-import type { ElementItem } from "@/stores/types";
+import type { ElementItem, ParameterData } from "@/stores/types";
 
 export type CardViewType = "chart" | "table";
+export type ParamScope = "all" | "instance" | "type";
 
 type CreateCardConfig = {
   id: number;
@@ -28,6 +29,7 @@ type UseCardCreatorDeps = {
 export function useCardCreator(deps: UseCardCreatorDeps) {
   const draftCategoryLoading = ref(false);
   const draftCategoryError = ref("");
+  const paramScope = ref<ParamScope>("all");
 
   const draft = reactive<{
     category: string | null;
@@ -44,6 +46,19 @@ export function useCardCreator(deps: UseCardCreatorDeps) {
     { label: "Table", value: "table" },
   ];
 
+  const paramScopeOptions: { label: string; value: ParamScope }[] = [
+    { label: "All", value: "all" },
+    { label: "Instance", value: "instance" },
+    { label: "Type", value: "type" },
+  ];
+
+  function matchesScope(param: ParameterData, scope: ParamScope): boolean {
+    if (scope === "all") return true;
+    if (scope === "instance") return param.isTypeParameter === false;
+    if (scope === "type") return param.isTypeParameter === true;
+    return true;
+  }
+
   const availableParameters = computed(() => {
     const category = draft.category;
     if (!category) return [];
@@ -51,14 +66,23 @@ export function useCardCreator(deps: UseCardCreatorDeps) {
     const categoryItems = deps.categorySnapshots.value[category] || [];
     const set = new Set<string>();
     for (const element of categoryItems) {
-      for (const param of element.parameters || []) {
-        if (param?.name) set.add(String(param.name));
+      for (const param of (element.parameters || []) as ParameterData[]) {
+        if (!param?.name) continue;
+        if (!matchesScope(param, paramScope.value)) continue;
+        set.add(String(param.name));
       }
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   });
 
   const canCreateCard = computed(() => !!draft.category && !!draft.parameter);
+
+  function onParamScopeChange(value: ParamScope) {
+    paramScope.value = value || "all";
+    if (draft.parameter && !availableParameters.value.includes(draft.parameter)) {
+      draft.parameter = null;
+    }
+  }
 
   async function onDraftCategoryChange(value: string | null) {
     draft.category = value;
@@ -105,9 +129,12 @@ export function useCardCreator(deps: UseCardCreatorDeps) {
     draftCategoryLoading,
     draftCategoryError,
     viewTypeOptions,
+    paramScope,
+    paramScopeOptions,
     availableParameters,
     canCreateCard,
     onDraftCategoryChange,
+    onParamScopeChange,
     createCard,
   };
 }
