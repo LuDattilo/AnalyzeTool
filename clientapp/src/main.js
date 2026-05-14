@@ -30,6 +30,9 @@ import Toast from "primevue/toast";
 import ToastService from "primevue/toastservice";
 
 import { definePreset } from "@primeuix/themes";
+import { registerChartPlugins } from "@/composables/chartSetup";
+
+registerChartPlugins();
 
 const app = createApp(App);
 const stylePreset = definePreset(Aura, {

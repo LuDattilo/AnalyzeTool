@@ -1,5 +1,30 @@
 # Changelog
 
+## [Unreleased - fork by LuDattilo] — feature/chart-improvements
+
+### Charts & Visualization
+
+- 🔍 **Zoom & Pan** on all bar/line charts (mouse wheel zoom, drag to pan, pinch on touch). Reset-zoom button in toolbar.
+- 🆕 **Statistics Dashboard** view (`/statistics`) with KPI cards, top-categories bar chart, treemap and parameter fill-rate heatmap.
+- 🆕 **Treemap chart** — proportional category visualization using `chartjs-chart-treemap`.
+- 🆕 **Heatmap chart** — category × parameter fill-rate matrix using `chartjs-chart-matrix` with switchable color scales (blue/viridis/red-green).
+- 🔄 **Chart type switcher** in toolbar — switch any chart between bar, line, doughnut, polarArea on the fly.
+- 💾 **PNG and CSV export** built into every chart toolbar.
+- 🖥 **Fullscreen mode** for any chart (Escape to exit).
+- 🎨 Unified palette and dark-mode-aware tooltips/legends via `useChartDefaults` composable.
+
+### Architecture & Performance
+
+- 📦 **Bundle splitting**: vendor chunks for Chart.js, PrimeVue, Vue, and Vue ecosystem. Initial `index` chunk reduced from **1,319 kB to 30 kB** (-97%).
+- ⚡ **Lazy-loaded routes**: all secondary views are dynamically imported, loading only the code needed for the active route.
+- 🧩 New reusable `ChartContainer.vue` wrapper — single source of truth for chart UX (toolbar, zoom, export, fullscreen).
+- 🧮 `useChartDefaults` composable centralizes options, palette, hover colors and theme reactivity.
+- 🔧 Plugin registration in `composables/chartSetup.ts` (idempotent, called once on app boot).
+
+### Fixes
+
+- 🐛 Repaired broken `CategoryChart.vue`: store import (`useElements` → `useElementsStore`) and category field (`CategoryName` → `categoryName` with fallback).
+
 ## [1.3.0] / 2026-05-10
 
 - 🆕 Added a new "Home" page. Infinite Kanban, where you can view diagrams and tables in one place.

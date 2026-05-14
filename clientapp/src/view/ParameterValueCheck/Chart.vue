@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, onMounted, onBeforeUnmount } from "vue";
-import Chart from "primevue/chart";
+import { computed, ref, nextTick } from "vue";
 import { Commands, sendRequest } from "@/RevitBridge";
 import { ParameterOrgin } from "@/stores/types";
 import type { ElementItem, ParameterData } from "@/stores/types";
 import { resolveInstanceActionElementIds, type RevitActionMatch } from "@/utils/revitActionTargets";
+import { useChartDefaults } from "@/composables/useChartDefaults";
+import ChartContainer from "@/components/charts/ChartContainer.vue";
+
+type ChartType = "bar" | "line" | "doughnut" | "polarArea";
 
 type ParamChart = {
   parameter: string;
@@ -21,39 +24,25 @@ const props = defineProps<{
   selectedParameter?: string | null;
 }>();
 
-const themeVersion = ref(0);
-let themeObserver: MutationObserver | null = null;
-
-function resolveCssVar(name: string, fallback: string): string {
-  if (typeof window === "undefined") return fallback;
-  const value = window.getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return value || fallback;
-}
-
-const palette = computed(() => {
-  void themeVersion.value;
-  return [
-    resolveCssVar("--p-blue-500", "#42A5F5"),
-    resolveCssVar("--p-emerald-500", "#66BB6A"),
-    resolveCssVar("--p-amber-500", "#FFA726"),
-    resolveCssVar("--p-violet-500", "#AB47BC"),
-    resolveCssVar("--p-cyan-500", "#26C6DA"),
-    resolveCssVar("--p-red-500", "#EF5350"),
-    resolveCssVar("--p-yellow-500", "#FFCA28"),
-  ];
+const { palette, hoverPalette, baseOptions } = useChartDefaults({
+  enableZoom: true,
+  enablePan: true,
+  enableLegend: false,
+  zoomMode: "x",
 });
 
 const activeFilters = computed(() => props.filters ?? []);
 const activeSearch = computed(() => (props.search ?? "").trim().toLowerCase());
 const hasItems = computed(() => Array.isArray(props.items) && props.items.length > 0);
 const expanded = ref<string | null>(null);
+const chartTypes = ref<Record<string, ChartType>>({});
+
 const activeClickAction = computed(() =>
   props.clickAction && props.clickAction.toLowerCase() === "isolation" ? "Isolation" : "Selection",
 );
 
 function matchesFilters(param: ParameterData, filters: string[]): boolean {
   if (!filters || filters.length === 0) return true;
-
   return filters.every((filter) => {
     if (filter === "Instance") return param.isTypeParameter === false;
     if (filter === "Type") return param.isTypeParameter === true;
@@ -96,16 +85,11 @@ const parameterCharts = computed(() => {
       const entries = Array.from(valueMap.entries())
         .map(([value, matches]) => {
           const elementIds = resolveInstanceActionElementIds(props.items, matches);
-          return {
-            value,
-            count: elementIds.length,
-            elementIds,
-          };
+          return { value, count: elementIds.length, elementIds };
         })
         .filter((entry) => entry.count > 0)
         .sort((a, b) => b.count - a.count);
 
-      // Apply search: match parameter name or value label
       const q = activeSearch.value;
       let filteredEntries = entries;
       if (q) {
@@ -117,30 +101,48 @@ const parameterCharts = computed(() => {
 
       if (filteredEntries.length === 0) return null;
 
+      const colors = filteredEntries.map(
+        (_, idx) => palette.value[idx % palette.value.length],
+      );
+      const hoverColors = filteredEntries.map(
+        (_, idx) => hoverPalette.value[idx % hoverPalette.value.length],
+      );
+
+      const currentType: ChartType = chartTypes.value[parameter] || "bar";
+      const isCircular = currentType === "doughnut" || currentType === "polarArea";
+
       const data = {
         labels: filteredEntries.map((e) => e.value),
         datasets: [
           {
             label: "Count",
             data: filteredEntries.map((e) => e.count),
-            backgroundColor: filteredEntries.map(
-              (_, idx) => palette.value[idx % palette.value.length],
-            ),
+            backgroundColor: colors,
+            hoverBackgroundColor: hoverColors,
+            borderColor: hoverColors,
+            borderRadius: isCircular ? 0 : 4,
+            maxBarThickness: 32,
+            fill: currentType === "line" ? false : true,
+            tension: 0.3,
           },
         ],
       };
 
+      const base = baseOptions.value;
       const options = {
-        responsive: true,
+        ...base,
         plugins: {
-          legend: { display: false },
+          ...base.plugins,
+          legend: { ...base.plugins.legend, display: isCircular },
           tooltip: {
+            ...base.plugins.tooltip,
             callbacks: {
-              label: (context) => `Count: ${context.formattedValue}`,
+              label: (context: any) => `Count: ${context.formattedValue}`,
             },
           },
         },
-        onClick: (evt, elements, chart) => {
+        scales: isCircular ? undefined : base.scales,
+        onClick: (evt: any, _elements: any, chart: any) => {
           const points = chart?.getElementsAtEventForMode(
             evt,
             "nearest",
@@ -179,29 +181,18 @@ const visibleCharts = computed(() => {
 
 function toggleExpand(parameter: string) {
   expanded.value = expanded.value === parameter ? null : parameter;
-  // Force chart.js to recompute dimensions after layout change
   nextTick(() => {
     window.dispatchEvent(new Event("resize"));
   });
 }
 
-onMounted(() => {
-  if (typeof window === "undefined") return;
-  themeObserver = new MutationObserver(() => {
-    themeVersion.value += 1;
-  });
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["class", "style", "data-theme"],
-  });
-});
+function getChartType(parameter: string): ChartType {
+  return chartTypes.value[parameter] || "bar";
+}
 
-onBeforeUnmount(() => {
-  if (themeObserver) {
-    themeObserver.disconnect();
-    themeObserver = null;
-  }
-});
+function onTypeChange(parameter: string, t: ChartType) {
+  chartTypes.value = { ...chartTypes.value, [parameter]: t };
+}
 </script>
 
 <template>
@@ -229,14 +220,31 @@ onBeforeUnmount(() => {
             />
           </div>
         </template>
-        <Chart
-          type="bar"
-          :data="chart.data"
-          :options="chart.options"
-          :key="chart.parameter + (expanded ? '-expanded' : '-normal')"
-          class="w-full h-full"
-        />
+        <div class="chart-slot" :class="expanded === chart.parameter ? 'is-expanded' : ''">
+          <ChartContainer
+            :type="getChartType(chart.parameter)"
+            :data="chart.data"
+            :options="chart.options"
+            :title="chart.parameter"
+            :type-switcher="['bar', 'line', 'doughnut', 'polarArea']"
+            :export-filename="chart.parameter"
+            :show-toolbar="true"
+            @type-change="(t) => onTypeChange(chart.parameter, t)"
+          />
+        </div>
       </Panel>
     </div>
   </div>
 </template>
+
+<style scoped>
+.chart-slot {
+  width: 100%;
+  height: 18rem;
+}
+
+.chart-slot.is-expanded {
+  height: calc(100vh - 14rem);
+  min-height: 24rem;
+}
+</style>

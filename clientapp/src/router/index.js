@@ -1,12 +1,14 @@
 import { createWebHistory, createRouter } from "vue-router";
 
-import AboutView from "@/view/AboutView.vue";
-import ParameterFilledEmptyPage from "@/view/ParameterFilledEmptyView.vue";
-import RevitDocumentHealthView from "@/view/RevitDocumentHealthView.vue";
-import ParameterValueCheckView from "@/view/ParameterValueCheckView.vue";
-import FamiliesView from "@/view/FamiliesView.vue";
-import ConnectParameters from "@/view/ConnectParameters/ConnectParametersView.vue";
 import ParameterCanvasView from "@/view/InfiniteCanvas/ParameterCanvasView.vue";
+
+const AboutView = () => import("@/view/AboutView.vue");
+const ParameterFilledEmptyPage = () => import("@/view/ParameterFilledEmptyView.vue");
+const RevitDocumentHealthView = () => import("@/view/RevitDocumentHealthView.vue");
+const ParameterValueCheckView = () => import("@/view/ParameterValueCheckView.vue");
+const FamiliesView = () => import("@/view/FamiliesView.vue");
+const ConnectParameters = () => import("@/view/ConnectParameters/ConnectParametersView.vue");
+const StatisticsView = () => import("@/view/StatisticsView.vue");
 
 const routes = [
   { path: "/", component: ParameterCanvasView },
@@ -18,6 +20,7 @@ const routes = [
   { path: "/families", component: FamiliesView },
   { path: "/connectParameters", component: ConnectParameters },
   { path: "/parameterCanvasView", component: ParameterCanvasView },
+  { path: "/statistics", component: StatisticsView },
 ];
 
 const router = createRouter({
